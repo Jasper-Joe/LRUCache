@@ -18,9 +18,6 @@ import javax.imageio.ImageIO;
 
 public class RequestHandler implements Runnable {
 
-    /**
-     * Socket connected to client passed by Proxy server
-     */
     Socket clientSocket;
 
 
@@ -51,10 +48,6 @@ public class RequestHandler implements Runnable {
 
 
 
-    /**
-     * Reads and examines the requestString and calls the appropriate method based
-     * on the request type.
-     */
     @Override
     public void run() {
 
@@ -370,10 +363,7 @@ public class RequestHandler implements Runnable {
     }
 
 
-    /**
-     * Handles HTTPS requests between client and remote server
-     * @param urlString desired file to be transmitted over https
-     */
+
     private void handleHTTPSRequest(String urlString){
         // Extract the URL and port of remote
         String url = urlString.substring(7);
@@ -426,7 +416,8 @@ public class RequestHandler implements Runnable {
 
             // Listen to remote server and relay to client
             try {
-                byte[] buffer = new byte[4096];
+                final int byteSize = 4096;
+                byte[] buffer = new byte[byteSize];
                 int read;
                 do {
                     read = proxyToServerSocket.getInputStream().read(buffer);
@@ -439,14 +430,14 @@ public class RequestHandler implements Runnable {
                 } while (read >= 0);
             }
             catch (SocketTimeoutException e) {
-
+                System.out.println("Socket timeout");
             }
             catch (IOException e) {
                 e.printStackTrace();
             }
 
 
-            // Close Down Resources
+
             if(proxyToServerSocket != null){
                 proxyToServerSocket.close();
             }
@@ -484,22 +475,13 @@ public class RequestHandler implements Runnable {
 
 
 
-    /**
-     * Listen to data from client and transmits it to server.
-     * This is done on a separate thread as must be done
-     * asynchronously to reading data from server and transmitting
-     * that data to the client.
-     */
+
     class ClientToServerHttpsTransmit implements Runnable{
 
         InputStream proxyToClientIS;
         OutputStream proxyToServerOS;
 
-        /**
-         * Creates Object to Listen to Client and Transmit that data to the server
-         * @param proxyToClientIS Stream that proxy uses to receive data from client
-         * @param proxyToServerOS Stream that proxy uses to transmit data to remote server
-         */
+
         public ClientToServerHttpsTransmit(InputStream proxyToClientIS, OutputStream proxyToServerOS) {
             this.proxyToClientIS = proxyToClientIS;
             this.proxyToServerOS = proxyToServerOS;
@@ -532,10 +514,7 @@ public class RequestHandler implements Runnable {
     }
 
 
-    /**
-     * This method is called when user requests a page that is blocked by the proxy.
-     * Sends an access forbidden message back to the client
-     */
+
     private void blockedSiteRequested(){
         try {
             BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));

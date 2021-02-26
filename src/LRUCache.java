@@ -2,6 +2,8 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+// Time complexity O(1) for both put and get
+// Space complexity O(capacity)
 public class LRUCache {
     class DLinkedNode {
         String key;
@@ -15,7 +17,14 @@ public class LRUCache {
     private int capacity;
     private DLinkedNode head, tail;
 
-    private void addNode(DLinkedNode node) {
+    // helper function to debug
+    public void iterate() {
+        for(Map.Entry<String, DLinkedNode> entry: this.cache.entrySet()) {
+            System.out.println((entry.getKey()));
+        }
+    }
+
+    private synchronized void addNode(DLinkedNode node) {
         /**
          * Always add the new node right after head.
          */
@@ -26,7 +35,7 @@ public class LRUCache {
         head.next = node;
     }
 
-    private DLinkedNode popTail() {
+    private synchronized DLinkedNode popTail() {
         /**
          * Pop the current tail.
          */
@@ -35,7 +44,7 @@ public class LRUCache {
         return res;
     }
 
-    private void removeNode(DLinkedNode node){
+    private synchronized void removeNode(DLinkedNode node){
         /**
          * Remove an existing node from the linked list.
          */
@@ -60,7 +69,7 @@ public class LRUCache {
         tail.prev = head;
     }
 
-    private void moveToHead(DLinkedNode node){
+    private synchronized void moveToHead(DLinkedNode node){
         /**
          * Move certain node in between to the head.
          */
@@ -68,7 +77,7 @@ public class LRUCache {
         addNode(node);
     }
 
-    public File get(String key) {
+    public synchronized File get(String key) {
         DLinkedNode node = cache.get(key);
         if (node == null) return null;
 
@@ -79,7 +88,7 @@ public class LRUCache {
         return node.value;
     }
 
-    public void put(String key, File value) {
+    public synchronized void put(String key, File value) {
         DLinkedNode node = cache.get(key);
 
         if(node == null) {

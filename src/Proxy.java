@@ -1,16 +1,9 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 
 
 public class Proxy implements Runnable{
@@ -39,7 +32,9 @@ public class Proxy implements Runnable{
     static LRUCache lruCache;
 
     // blocked sites
-    static HashMap<String, String> blockedSites;
+    //static HashMap<String, String> blockedSites;
+
+    public static HashSet<String> blockedSites;
 
     // store all the threads that currently running
     static ArrayList<Thread> threadWorkers;
@@ -56,13 +51,13 @@ public class Proxy implements Runnable{
         lruCache = new LRUCache(LRUCapacity);
 
         // cache blocked sites
-        blockedSites = new HashMap<>();
+        blockedSites = new HashSet<>();
 
         // Create array list to hold servicing threads
         threadWorkers = new ArrayList<>();
 
-        // Start dynamic manager on a separate thread.
-        //new Thread(this).start();
+
+        new Thread(this).start();
 
         try{
             // Load in cached sites from file
@@ -71,27 +66,16 @@ public class Proxy implements Runnable{
                 System.out.println("No cached sites found - creating new file");
                 cachedSites.createNewFile();
             } else {
-//                FileInputStream fileInputStream = new FileInputStream(cachedSites);
-//                System.out.println("reached 2");
-//                ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-//                System.out.println("reached 2");
-//                cache = (HashMap<String,File>)objectInputStream.readObject();
-//                System.out.println("reached 2");
-//                fileInputStream.close();
-//                objectInputStream.close();
+                //LoadData.readCachedSites();
             }
 
             // Load in blocked sites from file
             File blockedSitesTxtFile = new File("blockedSites.txt");
             if(!blockedSitesTxtFile.exists()){
-                System.out.println("No blocked sites found - creating new file");
+                System.out.println("No default blocked sites");
                 blockedSitesTxtFile.createNewFile();
             } else {
-//                FileInputStream fileInputStream = new FileInputStream(blockedSitesTxtFile);
-//                ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-//                blockedSites = (HashMap<String, String>)objectInputStream.readObject();
-//                fileInputStream.close();
-//                objectInputStream.close();
+                LoadData.readBlockedSites();
             }
         } catch (IOException e) {
             System.out.println("Error loading previously cached sites file");
@@ -119,10 +103,7 @@ public class Proxy implements Runnable{
     }
 
 
-    /**
-     * Listens to port and accepts new socket connections.
-     * Creates a new thread to handle the request and passes it the socket connection and continues listening.
-     */
+
     public void listen(){
 
         while(isRunning){
@@ -164,10 +145,7 @@ public class Proxy implements Runnable{
     }
 
 
-    /**
-     * Saves the blocked and cached sites to a file so they can be re loaded at a later time.
-     * Also joins all of the RequestHandler threads currently servicing requests.
-     */
+    // save cached file for further use
     private void closeServer(){
         isRunning = false;
         try{
@@ -177,7 +155,6 @@ public class Proxy implements Runnable{
             objectOutputStream.writeObject(cache);
             objectOutputStream.close();
             fileOutputStream.close();
-            System.out.println("Cached Sites written");
 
             FileOutputStream fileOutputStream2 = new FileOutputStream("blockedSites.txt");
             ObjectOutputStream objectOutputStream2 = new ObjectOutputStream(fileOutputStream2);
@@ -215,64 +192,42 @@ public class Proxy implements Runnable{
 
 
 
-    /**
-     * Check if a URL is blocked by the proxy
-     * @param url URL to check
-     * @return true if URL is blocked, false otherwise
-     */
+    // if the prefix stored in blocked Sites match with url, then block it
     public static boolean isBlocked (String url){
-        if(blockedSites.get(url) != null){
-            return true;
-        } else {
-            return false;
+        for (String s: blockedSites) {
+            if (url.startsWith(s)) {
+                return true;
+            }
         }
+        return false;
     }
 
 
 
 
-    /**
-     * Creates a management interface which can dynamically update the proxy configurations
-     * 		blocked : Lists currently blocked sites
-     *  	cached	: Lists currently cached sites
-     *  	close	: Closes the proxy server
-     *  	*		: Adds * to the list of blocked sites
-     */
+   // user interface to add blocked sites
     @Override
     public void run() {
         Scanner scanner = new Scanner(System.in);
 
-        String command;
+        String userInput;
         while(isRunning){
-            System.out.println("Enter new site to block, or type \"blocked\" to see blocked sites, \"cached\" to see cached sites, or \"close\" to close server.");
-            command = scanner.nextLine();
-            if(command.toLowerCase().equals("blocked")){
-                System.out.println("\nCurrently Blocked Sites");
-                for(String key : blockedSites.keySet()){
-                    System.out.println(key);
+            System.out.println("Please enter websites you want to block");
+            userInput = scanner.nextLine();
+            if(userInput.equals("blocked")) {
+                for(String s: blockedSites) {
+                    System.out.println(s);
                 }
-                System.out.println();
+            } else if(userInput.equals("cached")) {
+                lruCache.iterate();
             }
-
-            else if(command.toLowerCase().equals("cached")){
-                System.out.println("\nCurrently Cached Sites");
-                for(String key : cache.keySet()){
-                    System.out.println(key);
-                }
-                System.out.println();
-            }
-
-
-            else if(command.equals("close")){
-                isRunning = false;
-                closeServer();
-            }
-
-
             else {
-                blockedSites.put(command, command);
-                System.out.println("\n" + command + " blocked successfully \n");
+                if(userInput.startsWith("http")) {
+                    blockedSites.add(userInput);
+                }
+
             }
+
         }
         scanner.close();
     }
